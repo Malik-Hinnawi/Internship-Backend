@@ -1,0 +1,28 @@
+Entities:
+
+Company(id, name)
+
+User(profile_photo, email, password, role, enabled, company)
+
+Company-User Relationship: One user can work for multiple companies. One company can have multiple users.
+
+Role_Admin- Can add a user to system.(email, name, surname), enabled =false
+Role_User- activate account diyerek, activation yapicak,
+
+addUser(email, name, surname) -Only Role_Admin have authorization
+
+activateAccount_1(email)
+activateAccount_2(code, password)
+
+signin()
+
+updateProfile(name, surname, profile_photo(MultipartFile)..)
+
+viewUsers() Role_Admin and Role_User have authorization
+(Role_Admin can see all users(deleted ones included),
+Role_User role can see only active ones and can see only users of the companies he work)
+(Pagination should be)
+(All the companies the user work should be included to each user)
+
+add_user_to_company(company_id, user_id_list)
+ssl(HTTPs) to backend url. (Let's encrypt)
