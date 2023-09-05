@@ -1,55 +1,80 @@
 package com.application.internshipbackend.services;
 
-import com.application.internshipbackend.jpa.RoleRepository;
 import com.application.internshipbackend.jpa.UserRepository;
 import com.application.internshipbackend.jpa.ValidationCodeRepository;
 import com.application.internshipbackend.models.Message;
 import com.application.internshipbackend.models.Role;
 import com.application.internshipbackend.models.User;
 import com.application.internshipbackend.models.ValidationCode;
+import com.application.internshipbackend.payload.request.AuthenticationRequest;
+import com.application.internshipbackend.payload.request.RegisterRequest;
+import com.application.internshipbackend.payload.response.AuthenticationResponse;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Valid;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import lombok.AllArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.net.URI;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.Set;
 
 @Service
-@AllArgsConstructor
-public class AuthService implements UserDetailsService {
+@RequiredArgsConstructor
+public class AuthService {
 
-    private UserRepository userRepo;
+    private final UserRepository userRepo;
+    private final PasswordEncoder passwordEncoder;
     private ValidationCodeRepository validationCodeRepo;
-    private RoleRepository roleRepo;
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
 
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepo.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        return new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                user.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().getName()))
+
+
+    public AuthenticationResponse createUser(RegisterRequest request){
+        var user = User.builder()
+                .name(request.getFirstName())
+                .surname(request.getLastName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(Role.USER)
+                .enabled(true)
+                .isDeleted(false)
+                .build();
+        userRepo.save(user);
+        var jwtToken = jwtService.generateToken(user);
+        return AuthenticationResponse
+                .builder()
+                .token(jwtToken)
+                .build();
+    }
+
+    public AuthenticationResponse authenticate(AuthenticationRequest request){
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
         );
+
+        var user = userRepo.findByEmail(request.getEmail()).orElseThrow();
+        var jwtToken = jwtService.generateToken(user);
+        return AuthenticationResponse
+                .builder()
+                .token(jwtToken)
+                .build();
     }
 
-    public User createUser(User user){
-        return  userRepo.save(user);
-    }
 
 
     public User findUser(String email){
@@ -122,9 +147,7 @@ public class AuthService implements UserDetailsService {
         return sb.toString();
     }
 
-    public List<Role> findRoles(){
-        return roleRepo.findAll();
-    }
+
 
 
 

@@ -26,16 +26,6 @@ public class UserController {
     private EmailService emailService;
     private AuthService authService;
 
-    @PreAuthorize("hasRole('')")
-    @PostMapping(path = "/users")
-    public ResponseEntity<User> createUser(@Valid @RequestBody User user){
-        User savedUser = authService.createUser(user);
-        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
-                .path("/{id}")
-                .buildAndExpand(savedUser.getId())
-                .toUri();
-        return ResponseEntity.created(location).build();
-    }
 
     @PostMapping
     public ResponseEntity<?> login(@Valid @RequestBody User user){
@@ -57,10 +47,6 @@ public class UserController {
         return new Message("Email has been sent successfully");
     }
 
-    @GetMapping(path="/roles")
-    public List<Role> viewRoles(){
-        return authService.findRoles();
-    }
 
     @GetMapping(path="/users")
     public List<User> viewUsers(){
