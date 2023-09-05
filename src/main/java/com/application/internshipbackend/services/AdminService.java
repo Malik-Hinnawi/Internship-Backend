@@ -1,17 +1,12 @@
 package com.application.internshipbackend.services;
 
-import com.application.internshipbackend.jpa.UserRepository;
-import com.application.internshipbackend.models.User;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/admin-controller")
 public class AdminService {
-    private UserRepository userRepo;
-    public List<User> findAllUsers(){
-        return userRepo.findAll();
-    }
+
 }

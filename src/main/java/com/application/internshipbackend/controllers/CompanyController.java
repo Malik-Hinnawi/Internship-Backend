@@ -6,6 +6,7 @@ import com.application.internshipbackend.models.Company;
 import com.application.internshipbackend.models.User;
 import com.application.internshipbackend.services.CompanyService;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,9 +14,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @RestController
-@AllArgsConstructor
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/company-controller")
 public class CompanyController {
-    private CompanyService companyService;
+    private final CompanyService companyService;
 
     @GetMapping("/companies")
     public List<Company> listCompanies(){

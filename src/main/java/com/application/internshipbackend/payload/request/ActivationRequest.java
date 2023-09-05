@@ -10,9 +10,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class RegisterRequest {
-    private String firstName;
-    private String lastName;
+public class ActivationRequest {
     private String email;
 
+    @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$.!\\-+]).{8,32}$", message = "Password is invalid")
+    private String password;
+
+    private String code;
 }

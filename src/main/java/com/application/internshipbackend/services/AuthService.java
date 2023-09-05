@@ -6,14 +6,18 @@ import com.application.internshipbackend.models.Message;
 import com.application.internshipbackend.models.Role;
 import com.application.internshipbackend.models.User;
 import com.application.internshipbackend.models.ValidationCode;
+import com.application.internshipbackend.payload.request.ActivationEmailRequest;
+import com.application.internshipbackend.payload.request.ActivationRequest;
 import com.application.internshipbackend.payload.request.AuthenticationRequest;
 import com.application.internshipbackend.payload.request.RegisterRequest;
+import com.application.internshipbackend.payload.response.ActivationResponse;
 import com.application.internshipbackend.payload.response.AuthenticationResponse;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -34,11 +38,10 @@ public class AuthService {
 
     private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
-    private ValidationCodeRepository validationCodeRepo;
+    private final ValidationCodeRepository validationCodeRepo;
     private final JwtService jwtService;
+    private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
-
-
 
 
     public AuthenticationResponse createUser(RegisterRequest request){
@@ -46,9 +49,9 @@ public class AuthService {
                 .name(request.getFirstName())
                 .surname(request.getLastName())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(" ")
                 .role(Role.USER)
-                .enabled(true)
+                .enabled(false)
                 .isDeleted(false)
                 .build();
         userRepo.save(user);
@@ -77,11 +80,56 @@ public class AuthService {
 
 
 
-    public User findUser(String email){
-        return userRepo.findByEmail(email).orElse(null);
+
+
+
+    public ActivationResponse sendActivationEmail(ActivationEmailRequest request) {
+        User user = userRepo.findByEmail(request.getEmail()).orElseThrow(()-> new UsernameNotFoundException("This user is not found"));
+        ValidationCode code = generateValidationCode(user.getEmail());
+        user.setValidationCode(code);
+        code.setUser(user);
+
+        validationCodeRepo.save(code);
+        userRepo.save(user);
+
+        emailService.sendEmail(
+                user.getEmail(),
+                "Validation code",
+                "Your validation code is: " + code.getValidationCode()
+        );
+
+        return ActivationResponse
+                .builder()
+                .message("The validation email has been sent successfully")
+                .build();
     }
 
-    public ValidationCode generateValidationCode(String email){
+
+    public ActivationResponse activateAccount(ActivationRequest request) {
+        User user = userRepo.findByEmail(request.getEmail()).orElseThrow(()-> new UsernameNotFoundException("This user is not found"));
+        ValidationCode actualCode = validationCodeRepo.findByUser(user).orElseThrow(()-> new UsernameNotFoundException("Validation code for this user is not found"));
+        String requestedCode = request.getCode();
+
+        if(!requestedCode.equals(actualCode.getValidationCode())){
+            throw new RuntimeException("Validation codes do not match");
+        }
+
+        int codeId = actualCode.getId();
+        validationCodeRepo.deleteById(codeId);
+
+        String encryptedPassword = passwordEncoder.encode(request.getPassword());
+
+        user.setPassword(encryptedPassword);
+        user.setEnabled(true);
+        userRepo.save(user);
+
+        return ActivationResponse
+                .builder()
+                .message("Your account: "+ request.getEmail() + " is activated successfully")
+                .build();
+    }
+
+    private ValidationCode generateValidationCode(String email){
         User user = findUser(email);
         String generatedValidationCode = generateSixDigitCode();
 
@@ -92,48 +140,6 @@ public class AuthService {
 
         return code;
     }
-
-    public User activateAccount(String email, String code, String password){
-        User user = findUser(email);
-
-        ValidationCode actualCode = validationCodeRepo.findByUser(user).orElse(null);
-
-        if (actualCode == null) {
-            return null;
-        }
-
-        if (!actualCode.getValidationCode().equals(code)) {
-            return null;
-        }
-
-
-        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-        Set<ConstraintViolation<User>> violations = validator.validateValue(User.class, "password", password);
-
-        if (!violations.isEmpty()) {
-
-            StringBuilder errorMsg = new StringBuilder("Invalid password: ");
-            for (ConstraintViolation<User> violation : violations) {
-                errorMsg.append(violation.getMessage()).append("; ");
-            }
-            Message errorMessage = new Message(errorMsg.toString());
-            return null;
-        }
-
-
-        int id = actualCode.getId();
-        validationCodeRepo.deleteById(id);
-
-        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        String encryptedPassword = passwordEncoder.encode(password);
-
-        user.setPassword(encryptedPassword);
-        user.setEnabled(true);
-        userRepo.save(user);
-
-        return user;
-    }
-
 
     private String generateSixDigitCode() {
         SecureRandom random = new SecureRandom();
@@ -147,7 +153,9 @@ public class AuthService {
         return sb.toString();
     }
 
-
+    private User findUser(String email){
+        return userRepo.findByEmail(email).orElseThrow(()-> new UsernameNotFoundException("The username "+ email + " is not found"));
+    }
 
 
 
@@ -155,5 +163,9 @@ public class AuthService {
     public List<User> findSavedUsers(){
         return userRepo.findByIsDeletedFalse();
     }
+
+
+
+
 
 }
