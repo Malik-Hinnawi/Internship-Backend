@@ -4,6 +4,9 @@ import com.application.internshipbackend.jpa.CompanyRepository;
 import com.application.internshipbackend.jpa.UserRepository;
 import com.application.internshipbackend.models.Company;
 import com.application.internshipbackend.models.User;
+import com.application.internshipbackend.payload.request.CompanyRequest;
+import com.application.internshipbackend.payload.request.CompanyUserRequest;
+import com.application.internshipbackend.payload.response.SimpleCompanyResponse;
 import com.application.internshipbackend.services.CompanyService;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +27,14 @@ public class CompanyController {
         return companyService.findCompanies();
     }
 
-    @PostMapping("/companies/add")
-    public ResponseEntity<Company> addUsersToCompany(@RequestBody Integer company_id, @RequestBody List<Integer> user_ids ){
-        Company company = companyService.addUsersToCompany(company_id, user_ids);
-        return ResponseEntity.ok(company);
+    @PostMapping("/companies/create")
+    public ResponseEntity<SimpleCompanyResponse> createCompany(@RequestBody CompanyRequest request){
+        return ResponseEntity.ok(companyService.createCompany(request));
+    }
+
+    @PostMapping("/companies/add-users")
+    public ResponseEntity<SimpleCompanyResponse> addUsersToCompany(@RequestBody CompanyUserRequest request){
+        return ResponseEntity.ok(companyService.addUsersToCompany(request));
     }
 
     @DeleteMapping("/companies/{id}")

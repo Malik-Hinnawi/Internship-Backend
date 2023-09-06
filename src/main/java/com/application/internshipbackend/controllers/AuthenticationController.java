@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,11 +25,14 @@ public class AuthenticationController {
 
     private final AuthService authService;
 
+
     @PostMapping("/createAccount")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<AuthenticationResponse> register(
-          @Valid @RequestBody RegisterRequest request
+         @RequestBody RegisterRequest request
     ){
+
+
         return ResponseEntity.ok(authService.createUser(request));
     }
 

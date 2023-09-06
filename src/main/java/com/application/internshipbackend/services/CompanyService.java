@@ -4,8 +4,13 @@ import com.application.internshipbackend.jpa.CompanyRepository;
 import com.application.internshipbackend.jpa.UserRepository;
 import com.application.internshipbackend.models.Company;
 import com.application.internshipbackend.models.User;
+import com.application.internshipbackend.payload.request.CompanyRequest;
+import com.application.internshipbackend.payload.request.CompanyUserRequest;
+import com.application.internshipbackend.payload.response.SimpleAdminResponse;
+import com.application.internshipbackend.payload.response.SimpleCompanyResponse;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,22 +26,30 @@ public class CompanyService {
         return companyRepo.findAll();
     }
 
-    public Company addUsersToCompany(Integer company_id, List<Integer> user_ids ){
-        Company company = companyRepo.findById(company_id).orElse(null);
-        if (company == null) {
-            return null;
+    public SimpleCompanyResponse createCompany(CompanyRequest request){
+        Company newCompany = new Company();
+        newCompany.setName(request.getCompanyName());
+        companyRepo.save(newCompany);
+        return SimpleCompanyResponse
+                .builder()
+                .message("The company titled: " + request.getCompanyName()+ " is created")
+                .build();
+    }
+
+    public SimpleCompanyResponse addUsersToCompany(CompanyUserRequest request){
+        Company company = companyRepo.findById(request.getCompanyId()).orElseThrow(()-> new RuntimeException("Company with such an id is not found"));
+
+        for(Integer userId: request.getUserIds()) {
+            User user = userRepo.findById(userId).orElseThrow(()-> new UsernameNotFoundException("The user name with the id "+ userId +" is not found"));
+            user.getCompanies().add(company);
+            userRepo.save(user);
         }
 
-        List<User> usersToAdd = new ArrayList<>();
-        for(Integer userId: user_ids) {
-            User user = userRepo.findById(userId).orElse(null);
-            if (user != null) {
-                usersToAdd.add(user);
-            }
-        }
-        company.getUsers().addAll(usersToAdd);
-        companyRepo.save(company);
-        return company;
+
+        return SimpleCompanyResponse
+                .builder()
+                .message("The company has been added successfully")
+                .build();
     }
 
 

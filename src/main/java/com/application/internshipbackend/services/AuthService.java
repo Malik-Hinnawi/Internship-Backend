@@ -20,7 +20,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -44,6 +46,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
 
+
     public AuthenticationResponse createUser(RegisterRequest request){
         var user = User.builder()
                 .name(request.getFirstName())
@@ -56,6 +59,7 @@ public class AuthService {
                 .build();
         userRepo.save(user);
         var jwtToken = jwtService.generateToken(user);
+
         return AuthenticationResponse
                 .builder()
                 .token(jwtToken)
@@ -75,6 +79,9 @@ public class AuthService {
         return AuthenticationResponse
                 .builder()
                 .token(jwtToken)
+                .firstName(user.getName())
+                .lastName(user.getSurname())
+                .email(user.getEmail())
                 .build();
     }
 
@@ -86,11 +93,6 @@ public class AuthService {
     public ActivationResponse sendActivationEmail(ActivationEmailRequest request) {
         User user = userRepo.findByEmail(request.getEmail()).orElseThrow(()-> new UsernameNotFoundException("This user is not found"));
         ValidationCode code = generateValidationCode(user.getEmail());
-        user.setValidationCode(code);
-        code.setUser(user);
-
-        validationCodeRepo.save(code);
-        userRepo.save(user);
 
         emailService.sendEmail(
                 user.getEmail(),
@@ -114,8 +116,6 @@ public class AuthService {
             throw new RuntimeException("Validation codes do not match");
         }
 
-        int codeId = actualCode.getId();
-        validationCodeRepo.deleteById(codeId);
 
         String encryptedPassword = passwordEncoder.encode(request.getPassword());
 
@@ -133,7 +133,7 @@ public class AuthService {
         User user = findUser(email);
         String generatedValidationCode = generateSixDigitCode();
 
-        ValidationCode code = new ValidationCode();
+        ValidationCode code = validationCodeRepo.findByUser(user).orElse(new ValidationCode());
         code.setValidationCode(generatedValidationCode);
         code.setUser(user);
         validationCodeRepo.save(code);
