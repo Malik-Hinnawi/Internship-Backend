@@ -2,7 +2,6 @@ package com.application.internshipbackend.services;
 
 import com.application.internshipbackend.jpa.UserRepository;
 import com.application.internshipbackend.jpa.ValidationCodeRepository;
-import com.application.internshipbackend.models.Message;
 import com.application.internshipbackend.models.Role;
 import com.application.internshipbackend.models.User;
 import com.application.internshipbackend.models.ValidationCode;
@@ -11,28 +10,20 @@ import com.application.internshipbackend.payload.request.ActivationRequest;
 import com.application.internshipbackend.payload.request.AuthenticationRequest;
 import com.application.internshipbackend.payload.request.RegisterRequest;
 import com.application.internshipbackend.payload.response.ActivationResponse;
+import com.application.internshipbackend.payload.response.ApiResponse;
 import com.application.internshipbackend.payload.response.AuthenticationResponse;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.util.List;
-import java.util.Set;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -53,7 +44,7 @@ public class AuthService {
                 .surname(request.getLastName())
                 .email(request.getEmail())
                 .password(" ")
-                .role(Role.USER)
+                .role(Role.ROLE_USER)
                 .enabled(false)
                 .isDeleted(false)
                 .build();
@@ -66,23 +57,39 @@ public class AuthService {
                 .build();
     }
 
-    public AuthenticationResponse authenticate(AuthenticationRequest request){
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(AuthenticationRequest request){
+        Optional<User> maybeUser = userRepo.findByEmailAndIsDeleted(request.getEmail(), false);
 
-        var user = userRepo.findByEmail(request.getEmail()).orElseThrow();
+        if(maybeUser.isEmpty()){
+            return ResponseEntity.badRequest().body(new ApiResponse<>("There is no user with this email.", null));
+        }
+
+        User user = maybeUser.get();
+        if(!user.getEnabled()){
+            return ResponseEntity.badRequest().body(new ApiResponse<>("You need to activate your account.", null));
+        }
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
+        } catch (AuthenticationException e) {
+            return ResponseEntity.badRequest().body(new ApiResponse<>("Password is wrong.", null));
+        }
+
         var jwtToken = jwtService.generateToken(user);
-        return AuthenticationResponse
+        AuthenticationResponse result = AuthenticationResponse
                 .builder()
                 .token(jwtToken)
                 .firstName(user.getName())
                 .lastName(user.getSurname())
                 .email(user.getEmail())
                 .build();
+
+        return ResponseEntity.ok(new ApiResponse<>("Authenticated successfully.", result));
     }
 
 

@@ -5,6 +5,7 @@ import com.application.internshipbackend.payload.request.ActivationRequest;
 import com.application.internshipbackend.payload.request.AuthenticationRequest;
 import com.application.internshipbackend.payload.request.RegisterRequest;
 import com.application.internshipbackend.payload.response.ActivationResponse;
+import com.application.internshipbackend.payload.response.ApiResponse;
 import com.application.internshipbackend.payload.response.AuthenticationResponse;
 import com.application.internshipbackend.services.AuthService;
 import jakarta.validation.Valid;
@@ -37,10 +38,10 @@ public class AuthenticationController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthenticationResponse> authenticate(
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(
             @RequestBody AuthenticationRequest request
     ){
-        return ResponseEntity.ok(authService.authenticate(request));
+        return authService.authenticate(request);
     }
 
     @PostMapping("/send-activation-email")

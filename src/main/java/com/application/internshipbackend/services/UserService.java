@@ -16,7 +16,7 @@ public class UserService {
 
     public SimpleUserResponse viewAllUsers(SimpleUserRequest request) {
         User user = userRepo.findByEmail(request.getEmail()).orElseThrow(()-> new UsernameNotFoundException("The username with email "+ request.getEmail()+ " is not found"));
-        if(user.getRole() == Role.ADMIN){
+        if(user.getRole() == Role.ROLE_ADMIN){
             return SimpleUserResponse
                     .builder()
                     .users(userRepo.findAll())
