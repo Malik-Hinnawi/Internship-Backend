@@ -12,6 +12,9 @@ The main topics that this project tackles are:
 5. One to many table relation
 6. Signin and reset password through sending email.
 
+## Dependencies:
+They are defined in [pom.xml]
+
 ## Entities to create:
 1. User entity.
 2. Company entity.
