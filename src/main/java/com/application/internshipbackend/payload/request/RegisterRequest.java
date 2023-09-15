@@ -15,5 +15,4 @@ public class RegisterRequest implements UserEmailRequest {
     private String firstName;
     private String lastName;
     private String email;
-
 }

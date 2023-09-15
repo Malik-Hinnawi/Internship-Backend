@@ -42,7 +42,7 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(null)
                 .role(Role.ROLE_USER)
-                .enabled(false)
+                .enabled(true)
                 .isDeleted(false)
                 .build();
         userRepo.save(user);
