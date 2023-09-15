@@ -6,56 +6,102 @@ import com.application.internshipbackend.models.Company;
 import com.application.internshipbackend.models.User;
 import com.application.internshipbackend.payload.request.CompanyRequest;
 import com.application.internshipbackend.payload.request.CompanyUserRequest;
+import com.application.internshipbackend.payload.response.ApiResponse;
 import com.application.internshipbackend.payload.response.SimpleAdminResponse;
 import com.application.internshipbackend.payload.response.SimpleCompanyResponse;
 import lombok.AllArgsConstructor;
+import org.springframework.context.MessageSource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @AllArgsConstructor
 public class CompanyService {
     private CompanyRepository companyRepo;
     private UserRepository userRepo;
+    private final MessageSource messageSource;
 
-    public List<Company> findCompanies(){
-        return companyRepo.findAll();
+    public ResponseEntity<ApiResponse<List<Company>>> findCompanies(Locale locale){
+        return ApiResponse.okRequest(
+                messageSource.getMessage(
+                        "base.success",
+                        null,
+                        locale
+                ),
+                companyRepo.findAll()
+        );
     }
 
-    public SimpleCompanyResponse createCompany(CompanyRequest request){
+    public ResponseEntity<ApiResponse<SimpleCompanyResponse>> createCompany(CompanyRequest request, Locale locale){
         Company newCompany = new Company();
         newCompany.setName(request.getCompanyName());
         companyRepo.save(newCompany);
-        return SimpleCompanyResponse
-                .builder()
-                .message("The company titled: " + request.getCompanyName()+ " is created")
-                .build();
+        return ApiResponse.okRequest(messageSource.getMessage(
+                "base.success_company_creation",
+                new Object[]{request.getCompanyName()},
+                locale
+                ),
+                null
+        );
     }
 
-    public SimpleCompanyResponse addUsersToCompany(CompanyUserRequest request){
-        Company company = companyRepo.findById(request.getCompanyId()).orElseThrow(()-> new RuntimeException("Company with such an id is not found"));
+    public ResponseEntity<ApiResponse<SimpleCompanyResponse>> addUsersToCompany(CompanyUserRequest request, Locale locale){
+        Company company = companyRepo.findById(request.getCompanyId()).orElse(null);
+
+        if(company == null)
+            return ApiResponse.badRequest(
+                    messageSource.getMessage(
+                            "base.company.id_not_found",
+                            new Object[]{request.getCompanyId()},
+                            locale
+                    ),
+                    null
+            );
 
         for(Integer userId: request.getUserIds()) {
-            User user = userRepo.findById(userId).orElseThrow(()-> new UsernameNotFoundException("The user name with the id "+ userId +" is not found"));
+            User user = userRepo.findById(userId).orElse(null);
+            if(user == null){
+                return ApiResponse.badRequest(
+                        messageSource.getMessage(
+                                "base.user.id_not_found",
+                                new Object[]{Integer.toString(userId)},
+                                locale
+                        )
+                        ,null);
+            }
+
             user.getCompanies().add(company);
             userRepo.save(user);
         }
 
 
-        return SimpleCompanyResponse
-                .builder()
-                .message("The company has been added successfully")
-                .build();
+        return ApiResponse.okRequest(
+              messageSource.getMessage("base.success.users_added_company",
+                      null,
+                      locale),
+                null
+        );
     }
 
 
-    public Company deleteCompany(Integer company_id){
-        Company deletedCompany = companyRepo.findById(company_id).orElseThrow();
+    public ResponseEntity<ApiResponse<Company>> deleteCompany(Integer company_id, Locale locale){
+        Company deletedCompany = companyRepo.findById(company_id).orElse(null);
+        if(deletedCompany == null)
+            return ApiResponse.badRequest(
+                    messageSource.getMessage(
+                            "base.company.id_not_found",
+                            new Object[]{company_id},
+                            locale
+                    ),
+                    null
+            );
+
         companyRepo.delete(deletedCompany);
-        return deletedCompany;
+        return ApiResponse.acceptedRequest(deletedCompany);
     }
 }

@@ -6,15 +6,18 @@ import com.application.internshipbackend.models.Company;
 import com.application.internshipbackend.models.User;
 import com.application.internshipbackend.payload.request.CompanyRequest;
 import com.application.internshipbackend.payload.request.CompanyUserRequest;
+import com.application.internshipbackend.payload.response.ApiResponse;
 import com.application.internshipbackend.payload.response.SimpleCompanyResponse;
 import com.application.internshipbackend.services.CompanyService;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,23 +26,32 @@ public class CompanyController {
     private final CompanyService companyService;
 
     @GetMapping("/companies")
-    public List<Company> listCompanies(){
-        return companyService.findCompanies();
+    public ResponseEntity<ApiResponse<List<Company>>> listCompanies(Locale locale){
+        return companyService.findCompanies(locale);
     }
 
     @PostMapping("/companies/create")
-    public ResponseEntity<SimpleCompanyResponse> createCompany(@RequestBody CompanyRequest request){
-        return ResponseEntity.ok(companyService.createCompany(request));
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<SimpleCompanyResponse>> createCompany(
+            @RequestBody CompanyRequest request,
+            Locale locale){
+        return companyService.createCompany(request, locale);
     }
 
     @PostMapping("/companies/add-users")
-    public ResponseEntity<SimpleCompanyResponse> addUsersToCompany(@RequestBody CompanyUserRequest request){
-        return ResponseEntity.ok(companyService.addUsersToCompany(request));
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<SimpleCompanyResponse>> addUsersToCompany(
+            @RequestBody CompanyUserRequest request,
+            Locale locale){
+        return companyService.addUsersToCompany(request, locale);
     }
 
     @DeleteMapping("/companies/{id}")
-    public ResponseEntity<Company> deleteCompany(@PathVariable Integer id){
-        Company deletedCompany = companyService.deleteCompany(id);
-        return ResponseEntity.accepted().body(deletedCompany);
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<Company>> deleteCompany(
+            @PathVariable Integer id,
+            Locale locale
+            ){
+        return  companyService.deleteCompany(id, locale);
     }
 }

@@ -5,21 +5,21 @@ import com.application.internshipbackend.payload.request.ActivationRequest;
 import com.application.internshipbackend.payload.request.AuthenticationRequest;
 import com.application.internshipbackend.payload.request.RegisterRequest;
 import com.application.internshipbackend.payload.response.ActivationResponse;
+import com.application.internshipbackend.payload.response.ApiResponse;
 import com.application.internshipbackend.payload.response.AuthenticationResponse;
 import com.application.internshipbackend.services.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/v1/auth-controller")
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class AuthenticationController {
 
@@ -28,33 +28,36 @@ public class AuthenticationController {
 
     @PostMapping("/createAccount")
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<AuthenticationResponse> register(
-         @RequestBody RegisterRequest request
-    ){
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> register(
+            @RequestBody RegisterRequest request,
+           Locale locale
+            ){
 
-
-        return ResponseEntity.ok(authService.createUser(request));
+        return authService.createUser(request, locale);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthenticationResponse> authenticate(
-            @RequestBody AuthenticationRequest request
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(
+            @RequestBody AuthenticationRequest request,
+           Locale locale
     ){
-        return ResponseEntity.ok(authService.authenticate(request));
+        return authService.authenticate(request, locale);
     }
 
     @PostMapping("/send-activation-email")
-    public ResponseEntity<ActivationResponse> sendActivationEmail(
-            @RequestBody ActivationEmailRequest request
+    public ResponseEntity<ApiResponse<ActivationResponse>> sendActivationEmail(
+            @RequestBody ActivationEmailRequest request,
+            Locale locale
             ){
-        return ResponseEntity.ok(authService.sendActivationEmail(request));
+        return authService.sendActivationEmail(request, locale);
     }
 
     @PostMapping("/activate-account")
-    public ResponseEntity<ActivationResponse> activateAccount(
-            @Valid @RequestBody ActivationRequest request
+    public ResponseEntity<ApiResponse<ActivationResponse>> activateAccount(
+            @Valid @RequestBody ActivationRequest request,
+            Locale locale
             ){
-        return ResponseEntity.ok(authService.activateAccount(request));
+        return authService.activateAccount(request, locale);
     }
 
 }

@@ -2,37 +2,26 @@ package com.application.internshipbackend.services;
 
 import com.application.internshipbackend.jpa.UserRepository;
 import com.application.internshipbackend.jpa.ValidationCodeRepository;
-import com.application.internshipbackend.models.Message;
 import com.application.internshipbackend.models.Role;
 import com.application.internshipbackend.models.User;
 import com.application.internshipbackend.models.ValidationCode;
-import com.application.internshipbackend.payload.request.ActivationEmailRequest;
-import com.application.internshipbackend.payload.request.ActivationRequest;
-import com.application.internshipbackend.payload.request.AuthenticationRequest;
-import com.application.internshipbackend.payload.request.RegisterRequest;
+import com.application.internshipbackend.payload.request.*;
 import com.application.internshipbackend.payload.response.ActivationResponse;
+import com.application.internshipbackend.payload.response.ApiResponse;
 import com.application.internshipbackend.payload.response.AuthenticationResponse;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.context.MessageSource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
-import java.util.List;
-import java.util.Set;
+import java.util.Locale;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -44,76 +33,147 @@ public class AuthService {
     private final JwtService jwtService;
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
+    private final MessageSource messageSource;
 
-
-
-    public AuthenticationResponse createUser(RegisterRequest request){
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> createUser(RegisterRequest request, Locale locale){
         var user = User.builder()
                 .name(request.getFirstName())
                 .surname(request.getLastName())
                 .email(request.getEmail())
-                .password(" ")
-                .role(Role.USER)
+                .password(null)
+                .role(Role.ROLE_USER)
                 .enabled(false)
                 .isDeleted(false)
                 .build();
         userRepo.save(user);
         var jwtToken = jwtService.generateToken(user);
 
-        return AuthenticationResponse
+        return ApiResponse.okRequest(messageSource.getMessage("base.success_account_creation", null, locale),
+                AuthenticationResponse
                 .builder()
                 .token(jwtToken)
-                .build();
+                .email(user.getEmail())
+                .firstName(user.getName())
+                .lastName(user.getSurname())
+                .build()
+        );
     }
 
-    public AuthenticationResponse authenticate(AuthenticationRequest request){
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(AuthenticationRequest request, Locale locale){
+        Optional<User> maybeUser = userRepo.findByEmail(request.getEmail());
 
-        var user = userRepo.findByEmail(request.getEmail()).orElseThrow();
+        if(maybeUser.isEmpty()){
+            return handleUserNotFound(request, locale);
+        }
+
+        User user = maybeUser.get();
+
+        if(!user.isEnabled()){
+            return handleUserNotEnabled(request, locale);
+        }
+
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
+        } catch (AuthenticationException e){
+            return ApiResponse.badRequest("The password entered is incorrect", false, null);
+        }
+
         var jwtToken = jwtService.generateToken(user);
-        return AuthenticationResponse
+        return ApiResponse.okRequest(messageSource.getMessage("base.success", null,locale),
+                AuthenticationResponse
                 .builder()
                 .token(jwtToken)
                 .firstName(user.getName())
                 .lastName(user.getSurname())
                 .email(user.getEmail())
-                .build();
+                .build()
+        );
     }
 
 
 
 
+    public ResponseEntity<ApiResponse<ActivationResponse>> sendActivationEmail(ActivationEmailRequest request,Locale locale) {
+        Optional<User> maybeUser = userRepo.findByEmail(request.getEmail());
+        if(maybeUser.isEmpty()){
+            return handleUserNotFound(request, locale);
+        }
+
+        User user = maybeUser.get();
+
+        if(!user.isEnabled()){
+            return handleUserNotEnabled(request, locale);
+        }
 
 
-    public ActivationResponse sendActivationEmail(ActivationEmailRequest request) {
-        User user = userRepo.findByEmail(request.getEmail()).orElseThrow(()-> new UsernameNotFoundException("This user is not found"));
         ValidationCode code = generateValidationCode(user.getEmail());
 
         emailService.sendEmail(
                 user.getEmail(),
-                "Validation code",
-                "Your validation code is: " + code.getValidationCode()
+                messageSource.getMessage(
+                        "base.validation_code.subject",
+                    null,
+                        locale
+                ),
+                messageSource.getMessage(
+                        "base.validation_code.message",
+                        new Object[]{code.getValidationCode()},
+                        locale
+                )
         );
 
-        return ActivationResponse
+        return ApiResponse.okRequest(messageSource.getMessage(
+                "base.validation_code.success",
+                null,
+                locale),
+                ActivationResponse
                 .builder()
-                .message("The validation email has been sent successfully")
-                .build();
+                .message(messageSource.getMessage(
+                        "base.validation_code.success",
+                        null,
+                        locale
+                ))
+                .build()
+        );
     }
 
+    public ResponseEntity<ApiResponse<ActivationResponse>> activateAccount(ActivationRequest request, Locale locale) {
+        Optional<User> maybeUser = userRepo.findByEmail(request.getEmail());
 
-    public ActivationResponse activateAccount(ActivationRequest request) {
-        User user = userRepo.findByEmail(request.getEmail()).orElseThrow(()-> new UsernameNotFoundException("This user is not found"));
-        ValidationCode actualCode = validationCodeRepo.findByUser(user).orElseThrow(()-> new UsernameNotFoundException("Validation code for this user is not found"));
+        if(maybeUser.isEmpty()){
+            return handleUserNotFound(request, locale);
+        }
+
+        User user = maybeUser.get();
+
+        if(!user.isEnabled()){
+            return handleUserNotEnabled(request, locale);
+        }
+
+        ValidationCode actualCode = validationCodeRepo.findByUser(user).orElse(null);
+        if(actualCode == null)
+            return ApiResponse.badRequest(messageSource.getMessage(
+                    "base.validation_code.fail.not_found",
+                    new Object[]{user.getEmail()},
+                    locale
+                    ),null
+            );
+
         String requestedCode = request.getCode();
 
         if(!requestedCode.equals(actualCode.getValidationCode())){
-            throw new RuntimeException("Validation codes do not match");
+            return ApiResponse.badRequest(messageSource.getMessage(
+                    "base.validation_code.fail.match",
+                    null,
+                    locale
+                    ),
+                    null
+            );
         }
 
 
@@ -123,10 +183,13 @@ public class AuthService {
         user.setEnabled(true);
         userRepo.save(user);
 
-        return ActivationResponse
-                .builder()
-                .message("Your account: "+ request.getEmail() + " is activated successfully")
-                .build();
+        return ApiResponse.okRequest(messageSource.getMessage(
+                "base.success_account_activation",
+                new Object[]{user.getEmail()},
+                locale
+                ),
+                null
+        );
     }
 
     private ValidationCode generateValidationCode(String email){
@@ -157,11 +220,22 @@ public class AuthService {
         return userRepo.findByEmail(email).orElseThrow(()-> new UsernameNotFoundException("The username "+ email + " is not found"));
     }
 
+    private <R extends UserEmailRequest, S> ResponseEntity<ApiResponse<S>> handleUserNotEnabled(R request, Locale locale) {
+        return ApiResponse.badRequest(
+                messageSource.getMessage(
+                        "base.user_not_enabled",
+                        new Object[]{request.getEmail()},
+                        locale),
+                null);
+    }
 
-
-
-    public List<User> findSavedUsers(){
-        return userRepo.findByIsDeletedFalse();
+    private  <R extends UserEmailRequest, S> ResponseEntity<ApiResponse<S>> handleUserNotFound(R request, Locale locale) {
+        return ApiResponse.badRequest(
+                messageSource.getMessage(
+                        "base.user_not_found",
+                        new Object[]{request.getEmail()},
+                        locale),
+                null);
     }
 
 

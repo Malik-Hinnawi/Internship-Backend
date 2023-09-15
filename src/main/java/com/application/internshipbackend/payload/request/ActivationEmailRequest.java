@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ActivationEmailRequest {
+public class ActivationEmailRequest implements UserEmailRequest{
     private String email;
 }
