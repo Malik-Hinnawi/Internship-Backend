@@ -49,4 +49,8 @@ public class ApiResponse<T> {
         return ResponseEntity.badRequest().body(new ApiResponse<>(finalMessage, data));
     }
 
+    public static <T> ResponseEntity<ApiResponse<T>> createdRequest(String message, T data) {
+        return ResponseEntity.created(null).body(new ApiResponse<>(message, data));
+    }
+
 }
