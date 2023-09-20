@@ -1,6 +1,7 @@
 package com.application.internshipbackend.services;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectInputStream;
@@ -19,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -41,11 +43,16 @@ public class StorageService {
                 ));
         convertedFile.delete();
 
-        return ApiResponse.createdRequest(messageSource.getMessage(
+        return ApiResponse.okRequest(messageSource.getMessage(
                 "base.success",
                 null,
                 locale
         ), null);
+    }
+
+
+    public List<Bucket> listBuckets(){
+        return s3Client.listBuckets();
     }
 
     public ResponseEntity<ApiResponse<FileResponse>> downloadFile(String fileName, Locale locale){

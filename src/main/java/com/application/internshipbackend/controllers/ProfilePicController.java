@@ -1,5 +1,6 @@
 package com.application.internshipbackend.controllers;
 
+import com.amazonaws.services.s3.model.Bucket;
 import com.application.internshipbackend.payload.response.ApiResponse;
 import com.application.internshipbackend.payload.response.FileResponse;
 import com.application.internshipbackend.payload.response.SimpleUserResponse;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Locale;
 
 @RestController
@@ -28,6 +30,11 @@ public class ProfilePicController {
     public ResponseEntity<ApiResponse<FileResponse>>  downloadFile(@PathVariable String fileName, Locale locale){
 
         return storageService.downloadFile(fileName, locale);
+    }
+
+    @GetMapping
+    public List<Bucket> getBuckets(){
+        return storageService.listBuckets();
     }
 
 
