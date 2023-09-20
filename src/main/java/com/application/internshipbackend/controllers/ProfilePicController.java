@@ -21,21 +21,18 @@ import java.util.Locale;
 public class ProfilePicController {
     private final StorageService storageService;
 
-    @PostMapping("/upload")
-    public ResponseEntity<ApiResponse<SimpleUserResponse>> uploadFile(@RequestParam(value="file") MultipartFile file, Locale locale){
-        return storageService.uploadFile(file, locale);
+    @PostMapping("/upload/{userId}")
+    public ResponseEntity<ApiResponse<SimpleUserResponse>> uploadFile(@RequestParam(value="file") MultipartFile file,
+                                                          Locale locale,
+                                                          @PathVariable int userId){
+        return storageService.uploadFile(file, locale, userId);
     }
 
-    @GetMapping("/download/{fileName}")
-    public ResponseEntity<ApiResponse<FileResponse>>  downloadFile(@PathVariable String fileName, Locale locale){
-
-        return storageService.downloadFile(fileName, locale);
+    @GetMapping("/download/{userId}")
+    public ResponseEntity<ApiResponse<FileResponse>>  downloadFile(@PathVariable int userId, Locale locale){
+        return storageService.downloadFile(userId, locale);
     }
 
-    @GetMapping
-    public List<Bucket> getBuckets(){
-        return storageService.listBuckets();
-    }
 
 
 }
