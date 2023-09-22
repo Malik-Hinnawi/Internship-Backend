@@ -1,7 +1,9 @@
 package com.application.internshipbackend.services;
 
+import com.application.internshipbackend.jpa.DeviceRepository;
 import com.application.internshipbackend.jpa.UserRepository;
 import com.application.internshipbackend.jpa.ValidationCodeRepository;
+import com.application.internshipbackend.models.Device;
 import com.application.internshipbackend.models.Role;
 import com.application.internshipbackend.models.User;
 import com.application.internshipbackend.models.ValidationCode;
@@ -30,10 +32,12 @@ public class AuthService {
     private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final ValidationCodeRepository validationCodeRepo;
+    private final DeviceRepository deviceRepo;
     private final JwtService jwtService;
     private final EmailService emailService;
     private final AuthenticationManager authenticationManager;
     private final MessageSource messageSource;
+
 
     public ResponseEntity<ApiResponse<AuthenticationResponse>> createUser(RegisterRequest request, Locale locale){
         var user = User.builder()
@@ -82,6 +86,23 @@ public class AuthService {
             );
         } catch (AuthenticationException e){
             return ApiResponse.badRequest("The password entered is incorrect", false, null);
+        }
+
+        Integer deviceId = request.getDeviceId();
+        if(deviceId != null){
+            Optional<Device> maybeDevice = deviceRepo.findById(deviceId);
+            if(maybeDevice.isEmpty()){
+                Device device = new Device(deviceId, user);
+                deviceRepo.save(device);
+            }
+            else{
+                Device device = maybeDevice.get();
+                Integer deviceUserId = device.getUser().getId();
+                if(!deviceUserId.equals(user.getId())){
+                    device.setUser(user);
+                    deviceRepo.save(device);
+                }
+            }
         }
 
         var jwtToken = jwtService.generateToken(user);

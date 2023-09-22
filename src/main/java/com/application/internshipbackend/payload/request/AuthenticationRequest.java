@@ -12,4 +12,7 @@ import lombok.NoArgsConstructor;
 public class AuthenticationRequest implements UserEmailRequest{
     private String email;
     private String password;
+
+    @Builder.Default
+    private Integer deviceId = null;
 }
