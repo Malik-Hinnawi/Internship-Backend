@@ -4,6 +4,7 @@ import com.application.internshipbackend.jpa.CompanyRepository;
 import com.application.internshipbackend.jpa.UserRepository;
 import com.application.internshipbackend.models.Company;
 import com.application.internshipbackend.models.User;
+import com.application.internshipbackend.payload.request.CompanyManagerRequest;
 import com.application.internshipbackend.payload.request.CompanyRequest;
 import com.application.internshipbackend.payload.request.CompanyUserRequest;
 import com.application.internshipbackend.payload.response.ApiResponse;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 @Service
 @AllArgsConstructor
@@ -88,6 +90,42 @@ public class CompanyService {
         );
     }
 
+    public ResponseEntity<ApiResponse<SimpleCompanyResponse>> addManagerToCompany(CompanyManagerRequest request, Locale locale){
+        Optional<Company> maybeCompany = companyRepo.findById(request.getCompanyId());
+        Optional<User> maybeUser = userRepo.findById(request.getManagerId());
+
+        if(maybeCompany.isEmpty())
+            return ApiResponse.badRequest(
+                    messageSource.getMessage(
+                            "base.company.id_not_found",
+                            new Object[]{request.getCompanyId()},
+                            locale
+                    ),
+                    null
+            );
+        if(maybeUser.isEmpty())
+            return ApiResponse.badRequest(
+                    messageSource.getMessage(
+                            "base.user.id_not_found",
+                            new Object[]{request.getManagerId()},
+                            locale
+                    ),
+                    null
+            );
+
+        Company company = maybeCompany.get();
+        User manager = maybeUser.get();
+        company.setManager(manager);
+        companyRepo.save(company);
+
+        return ApiResponse.okRequest(
+                messageSource.getMessage(
+                        "base.success.manager_added",
+                        new Object[]{request.getManagerId(), request.getCompanyId()},
+                        locale
+                ), null
+        );
+    }
 
     public ResponseEntity<ApiResponse<Company>> deleteCompany(Integer company_id, Locale locale){
         Company deletedCompany = companyRepo.findById(company_id).orElse(null);

@@ -4,6 +4,7 @@ import com.application.internshipbackend.jpa.CompanyRepository;
 import com.application.internshipbackend.jpa.UserRepository;
 import com.application.internshipbackend.models.Company;
 import com.application.internshipbackend.models.User;
+import com.application.internshipbackend.payload.request.CompanyManagerRequest;
 import com.application.internshipbackend.payload.request.CompanyRequest;
 import com.application.internshipbackend.payload.request.CompanyUserRequest;
 import com.application.internshipbackend.payload.response.ApiResponse;
@@ -44,6 +45,15 @@ public class CompanyController {
             @RequestBody CompanyUserRequest request,
             Locale locale){
         return companyService.addUsersToCompany(request, locale);
+    }
+
+    @PostMapping("/companies/add-manager")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<SimpleCompanyResponse>> addManagerToCompany(
+            @RequestBody CompanyManagerRequest request,
+            Locale locale
+            ){
+        return companyService.addManagerToCompany(request, locale);
     }
 
     @DeleteMapping("/companies/{id}")

@@ -51,6 +51,7 @@ public class AuthService {
         return ApiResponse.okRequest(messageSource.getMessage("base.success_account_creation", null, locale),
                 AuthenticationResponse
                 .builder()
+                .id(user.getId())
                 .token(jwtToken)
                 .email(user.getEmail())
                 .firstName(user.getName())
@@ -87,6 +88,7 @@ public class AuthService {
         return ApiResponse.okRequest(messageSource.getMessage("base.success", null,locale),
                 AuthenticationResponse
                 .builder()
+                .id(user.getId())
                 .token(jwtToken)
                 .firstName(user.getName())
                 .lastName(user.getSurname())
