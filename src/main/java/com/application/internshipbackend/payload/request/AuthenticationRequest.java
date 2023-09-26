@@ -14,5 +14,5 @@ public class AuthenticationRequest implements UserEmailRequest{
     private String password;
 
     @Builder.Default
-    private Integer deviceId = null;
+    private Long deviceId = null;
 }

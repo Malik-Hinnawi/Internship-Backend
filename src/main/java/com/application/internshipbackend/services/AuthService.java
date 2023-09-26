@@ -88,7 +88,7 @@ public class AuthService {
             return ApiResponse.badRequest("The password entered is incorrect", false, null);
         }
 
-        Integer deviceId = request.getDeviceId();
+        Long deviceId = request.getDeviceId();
         if(deviceId != null){
             Optional<Device> maybeDevice = deviceRepo.findById(deviceId);
             if(maybeDevice.isEmpty()){

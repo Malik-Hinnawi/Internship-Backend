@@ -1,8 +1,10 @@
 package com.application.internshipbackend.services;
 
 import com.application.internshipbackend.jpa.CompanyRepository;
+import com.application.internshipbackend.jpa.DeviceRepository;
 import com.application.internshipbackend.jpa.UserRepository;
 import com.application.internshipbackend.models.Company;
+import com.application.internshipbackend.models.Device;
 import com.application.internshipbackend.models.User;
 import com.application.internshipbackend.payload.request.CompanyManagerRequest;
 import com.application.internshipbackend.payload.request.CompanyRequest;
@@ -24,9 +26,12 @@ import java.util.Optional;
 @Service
 @AllArgsConstructor
 public class CompanyService {
-    private CompanyRepository companyRepo;
-    private UserRepository userRepo;
+
+    private final CompanyRepository companyRepo;
+    private final UserRepository userRepo;
     private final MessageSource messageSource;
+    private final DeviceRepository deviceRepository;
+    private final PushNotificationService pushNotificationService;
 
     public ResponseEntity<ApiResponse<List<Company>>> findCompanies(Locale locale){
         return ApiResponse.okRequest(
@@ -77,6 +82,17 @@ public class CompanyService {
                         ,null);
             }
 
+            Optional<Device> isDevice = deviceRepository.findByUser(company.getManager());
+            if(isDevice.isPresent() && company.getManager() != null){
+                Device device = isDevice.get();
+                pushNotificationService.sendMessageToUser(
+                        messageSource.getMessage("base.success.push_notification",
+                                new Object[]{userId},
+                                locale
+                                )
+                        , company.getManager().getId());
+
+            }
             user.getCompanies().add(company);
             userRepo.save(user);
         }

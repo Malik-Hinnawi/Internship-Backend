@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Entity
 public class Device {
     @Id
-    private int DeviceId;
+    private Long DeviceId;
 
     @ManyToOne
     private User user;
